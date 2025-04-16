@@ -1,56 +1,46 @@
 import os
 
+import vertexai
 from fastapi import FastAPI, HTTPException
-from google.cloud import aiplatform
 from google.oauth2 import service_account
 from pydantic import BaseModel
+from vertexai.preview.generative_models import GenerativeModel
 
 app = FastAPI()
 
 PROJECT_ID = os.getenv("PROJECT_ID")
 REGION = os.getenv("REGION")
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
+MODEL_ID = "gemini-2.0-flash-001"
 
 
 class UserInput(BaseModel):
     user_input: str
 
 
-@app.post("/vapi-llm")
-async def vapi_llm(user_input: UserInput):
-    project_id = PROJECT_ID
-    region = REGION
-    if not project_id or not region:
-        raise HTTPException(
-            status_code=500,
-            detail="Environment variables PROJECT_ID and REGION must be set",
+@app.on_event("startup")
+def startup_event():
+    if not all([PROJECT_ID, REGION, SERVICE_ACCOUNT_FILE]):
+        raise RuntimeError(
+            "PROJECT_ID, REGION, and SERVICE_ACCOUNT_FILE must be set in environment variables."
         )
 
     credentials = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE
     )
-    client = aiplatform.gapic.PredictionServiceClient(credentials=credentials)
-    endpoint = client.endpoint_path(
-        project=project_id, location=region, endpoint="gemini-pro"
-    )
-
-    instance = {"content": user_input.user_input}
-    instances = [instance]
-    parameters = {}
-
-    response = client.predict(
-        endpoint=endpoint, instances=instances, parameters=parameters
-    )
-    if not response.predictions:
-        raise HTTPException(
-            status_code=500, detail="No predictions returned from the model"
-        )
-
-    return {"content": response.predictions[0]["content"]}
+    vertexai.init(project=PROJECT_ID, location=REGION, credentials=credentials)
 
 
-# Integration with an agenda booking system (e.g., Calendly)
+@app.post("/vapi-llm")
+async def vapi_llm(user_input: UserInput):
+    try:
+        model = GenerativeModel(MODEL_ID)
+        response = model.generate_content(user_input.user_input)
+        return {"content": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model error: {str(e)}")
+
+
 @app.post("/book-appointment")
 async def book_appointment():
-    # Placeholder for integration with an agenda booking system
     return {"message": "Appointment booked successfully"}
