@@ -2,13 +2,16 @@
 name = "blume-assistant"
 version = "0.1.0"
 description = "The backend of Blume voice assistant"
-authors = ["Your Name <you@example.com>"]
+authors = ["Adam MABROUK <adam@aigents.services>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 fastapi = "^0.68.0"
 uvicorn = "^0.15.0"
 google-cloud-aiplatform = "^1.7.0"
+
+[tool.poetry.group.dev.dependencies]
+isort = "^6.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

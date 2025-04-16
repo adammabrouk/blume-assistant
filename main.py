@@ -1,34 +1,53 @@
 import os
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from google.cloud import aiplatform
 from google.oauth2 import service_account
+from pydantic import BaseModel
 
 app = FastAPI()
+
+PROJECT_ID = os.getenv("PROJECT_ID")
+REGION = os.getenv("REGION")
+SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
+
 
 class UserInput(BaseModel):
     user_input: str
 
+
 @app.post("/vapi-llm")
 async def vapi_llm(user_input: UserInput):
-    project_id = os.getenv("PROJECT_ID")
-    region = os.getenv("REGION")
+    project_id = PROJECT_ID
+    region = REGION
     if not project_id or not region:
-        raise HTTPException(status_code=500, detail="Environment variables PROJECT_ID and REGION must be set")
+        raise HTTPException(
+            status_code=500,
+            detail="Environment variables PROJECT_ID and REGION must be set",
+        )
 
-    credentials = service_account.Credentials.from_service_account_file("path/to/service_account.json")
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE
+    )
     client = aiplatform.gapic.PredictionServiceClient(credentials=credentials)
-    endpoint = client.endpoint_path(project=project_id, location=region, endpoint="gemini-pro")
+    endpoint = client.endpoint_path(
+        project=project_id, location=region, endpoint="gemini-pro"
+    )
 
     instance = {"content": user_input.user_input}
     instances = [instance]
     parameters = {}
 
-    response = client.predict(endpoint=endpoint, instances=instances, parameters=parameters)
+    response = client.predict(
+        endpoint=endpoint, instances=instances, parameters=parameters
+    )
     if not response.predictions:
-        raise HTTPException(status_code=500, detail="No predictions returned from the model")
+        raise HTTPException(
+            status_code=500, detail="No predictions returned from the model"
+        )
 
     return {"content": response.predictions[0]["content"]}
+
 
 # Integration with an agenda booking system (e.g., Calendly)
 @app.post("/book-appointment")
