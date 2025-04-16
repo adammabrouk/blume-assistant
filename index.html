@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vapi SDK Client</title>
+    <script src="https://cdn.vapi.ai/sdk/vapi-sdk.js"></script>
+</head>
+<body>
+    <h1>Vapi SDK Client</h1>
+    <form id="vapi-form">
+        <label for="user_input">User Input:</label>
+        <input type="text" id="user_input" name="user_input" required>
+        <button type="submit">Submit</button>
+    </form>
+    <div id="response"></div>
+
+    <script>
+        document.getElementById('vapi-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const userInput = document.getElementById('user_input').value;
+            const responseDiv = document.getElementById('response');
+
+            try {
+                const response = await fetch('/vapi-llm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_input: userInput })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                responseDiv.textContent = data.content;
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
